@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>巷口茶鋪</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&family=Noto+Sans+TC:wght@500;700;900&family=Noto+Serif+TC:wght@900&display=swap">
+<style>
+/* 版面：單欄直式，頂端固定 HUD，中間依階段切換畫面，底部大按鈕在拇指範圍 */
+:root{
+  --bg:#e6eeea; --panel:#f7faf8; --line:#c5d3cc; --ink:#13302a; --mute:#5b7068;
+  --sign:#14463a; --sign-ink:#eaf6f0; --red:#d9402a; --red-ink:#fff; --gold:#e8a91c; --blue:#2f7fb3;
+  --good:#238b55; --bad:#c8352b; --skin:#f2c9a0; --seat:#dbe7e1;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-display:"Noto Serif TC","Songti TC",serif; --f-num:"DM Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1916; --panel:#16261f; --line:#2b4237; --ink:#e4f1ea; --mute:#8fa89d;
+  --sign:#1c5b4a; --sign-ink:#eaf6f0; --red:#ef5a41; --red-ink:#1d0905; --gold:#f0b83a; --blue:#5aa7d8;
+  --good:#4fc283; --bad:#ff7a6b; --skin:#e8b98c; --seat:#1d3329; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1916; --panel:#16261f; --line:#2b4237; --ink:#e4f1ea; --mute:#8fa89d;
+  --sign:#1c5b4a; --sign-ink:#eaf6f0; --red:#ef5a41; --red-ink:#1d0905; --gold:#f0b83a; --blue:#5aa7d8;
+  --good:#4fc283; --bad:#ff7a6b; --skin:#e8b98c; --seat:#1d3329; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:10px;overflow:hidden;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+button:disabled{cursor:not-allowed}
+b{font-weight:700}
+#app{height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:10px;position:relative}
+
+/* HUD */
+.hud{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--sign);color:var(--sign-ink);border-radius:14px;padding:8px 14px}
+.hud[hidden]{display:none}
+.hud .lbl{display:block;font-size:11px;letter-spacing:.12em;opacity:.75}
+.hud b{font-family:var(--f-num);font-size:18px;font-weight:500}
+.hud .cash b{font-size:22px;color:#ffd666}
+.hud .cash.bump b{animation:bump .4s}
+.repbar{display:block;width:84px;height:10px;border-radius:6px;background:rgba(255,255,255,.2);overflow:hidden;margin-top:6px}
+.repbar u{display:block;height:100%;background:#ffd666;border-radius:6px;transition:width .3s}
+@keyframes bump{40%{transform:scale(1.18)}}
+
+.screen{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
+.screen[hidden]{display:none}
+.scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px}
+
+/* 首頁 */
+.sign{background:var(--sign);color:var(--sign-ink);border-radius:18px;padding:22px 20px 18px;text-align:center;border:3px solid var(--red)}
+.sign small{letter-spacing:.3em;font-size:12px;opacity:.8}
+.sign h1{margin:6px 0 2px;font-family:var(--f-display);font-size:46px;line-height:1.1;letter-spacing:.08em}
+.goalbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.goalbox b{color:var(--red);font-family:var(--f-num);font-size:20px}
+.rules{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.rules li{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px;display:grid;grid-template-columns:26px 1fr;gap:10px;align-items:start;font-size:14px}
+.rules .n{width:26px;height:26px;border-radius:50%;background:var(--sign);color:var(--sign-ink);display:grid;place-items:center;font-family:var(--f-num);font-size:13px}
+
+/* 按鈕 */
+.btn{border:0;border-radius:14px;min-height:52px;padding:0 18px;font-weight:700;font-size:17px;background:var(--panel);border:1px solid var(--line);transition:transform .08s}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--red);color:var(--red-ink);border-color:var(--red);min-height:58px;font-size:19px;letter-spacing:.1em}
+.btn.small{min-height:44px;font-size:15px;padding:0 14px;border-radius:10px}
+.btn:disabled{opacity:.45}
+.cta{display:flex;flex-direction:column;gap:8px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* 準備畫面 */
+.forecast{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:14px}
+.forecast b{white-space:nowrap}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tab{min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-weight:700;font-size:14px}
+.tab[aria-selected="true"]{background:var(--sign);color:var(--sign-ink);border-color:var(--sign)}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;margin-bottom:8px}
+.item h3{margin:0;font-size:16px}
+.item p{margin:0;font-size:13px;color:var(--mute)}
+.item .acts{display:flex;gap:6px;grid-row:1/3;grid-column:2}
+.num{font-family:var(--f-num)}
+.pips{display:inline-flex;gap:4px;vertical-align:middle;margin-left:8px}
+.pips i{width:10px;height:10px;border-radius:50%;border:2px solid var(--sign);background:transparent}
+.pips i.on{background:var(--gold);border-color:var(--gold)}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;background:var(--seat);margin-left:6px;font-weight:500}
+.item.locked{opacity:.8}
+.stockbar{height:8px;border-radius:5px;background:var(--seat);overflow:hidden;margin-top:4px}
+.stockbar u{display:block;height:100%;background:var(--blue)}
+
+/* 營業畫面 */
+.daytop,.daystats,.menu,.forecast,.tabs,.goalbox,.sign,.medal,.ledger{flex:none}
+.daytop{display:grid;grid-template-columns:1fr auto;gap:8px 10px;align-items:center}
+.evt{font-size:14px;font-weight:700}
+.clock{grid-column:1/3;height:10px;border-radius:6px;background:var(--seat);overflow:hidden}
+.clock u{display:block;height:100%;background:var(--red);width:0}
+.seats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seat{position:relative;min-height:108px;border-radius:14px;background:var(--panel);border:2px dashed var(--line);padding:8px 10px;display:grid;grid-template-columns:48px 1fr;gap:4px 10px;align-items:center;overflow:visible}
+.seat.has{border-style:solid;border-color:var(--sign)}
+.seat .empty{grid-column:1/3;text-align:center;color:var(--mute);font-size:13px}
+.seat.has .empty{display:none}
+.seat .who{display:none}
+.seat.has .who{display:contents}
+.face{width:44px;height:44px;border-radius:50%;background:var(--skin);position:relative;justify-self:center}
+.face::before{content:"";position:absolute;left:12px;top:16px;width:5px;height:5px;border-radius:50%;background:#2a1a10;box-shadow:15px 0 0 #2a1a10}
+.face::after{content:"";position:absolute;left:13px;top:25px;width:18px;height:9px;border:3px solid #2a1a10;border-top:0;border-radius:0 0 18px 18px}
+.mood-meh .face::after{height:0;border-radius:0;border-width:3px 0 0;top:30px}
+.mood-mad .face::after{border-width:3px 3px 0;border-bottom:0;border-radius:18px 18px 0 0;top:30px}
+.want{font-weight:900;font-size:16px;line-height:1.25}
+.want small{display:block;font-weight:500;font-size:12px;color:var(--mute)}
+.pat{grid-column:1/3;height:8px;border-radius:5px;background:var(--seat);overflow:hidden}
+.pat u{display:block;height:100%;background:var(--good);transition:background .3s}
+.mood-meh .pat u{background:var(--gold)}
+.mood-mad .pat u{background:var(--bad)}
+.seat.arrive{animation:arrive .35s}
+.seat.cheer{animation:cheer .45s}
+.seat.angry{animation:shake .4s;border-color:var(--bad)}
+@keyframes arrive{from{transform:translateY(14px);opacity:.2}}
+@keyframes cheer{40%{transform:scale(1.05);background:color-mix(in srgb,var(--good) 25%,var(--panel))}}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.daystats{display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
+.menu{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}
+.drink{position:relative;min-height:86px;border-radius:14px;border:2px solid var(--sign);background:var(--panel);padding:8px 10px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.drink:active{transform:scale(.96)}
+.drink b{font-size:17px}
+.drink .pr{font-family:var(--f-num);color:var(--red);font-size:15px}
+.drink .st{position:absolute;right:10px;top:8px;font-family:var(--f-num);font-size:14px;background:var(--seat);border-radius:99px;padding:1px 9px}
+.drink.out{border-color:var(--line);opacity:.55}
+.drink.out .st{background:var(--bad);color:#fff}
+.drink.off{border-style:dashed;border-color:var(--line);opacity:.4;justify-content:center;align-items:center;text-align:center}
+.drink.pulse{animation:pulse .25s}
+.drink.shake{animation:shake .35s;border-color:var(--bad)}
+@keyframes pulse{50%{transform:scale(.94);background:var(--seat)}}
+.fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5}
+.float{position:absolute;font-family:var(--f-num);font-weight:500;font-size:20px;color:var(--good);text-shadow:0 1px 0 var(--bg);animation:rise 1s ease-out forwards;white-space:nowrap}
+.float.bad{color:var(--bad)}
+.float.tip{color:var(--red)}
+@keyframes rise{from{transform:translate(-50%,0);opacity:1}to{transform:translate(-50%,-56px);opacity:0}}
+.overlay{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 88%,transparent);display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;z-index:8;border-radius:14px}
+.overlay[hidden]{display:none}
+.toast{position:absolute;left:50%;top:76px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:14px;font-weight:700;z-index:9;max-width:88%;text-align:center;pointer-events:none}
+.toast[hidden]{display:none}
+
+/* 日報、最終 */
+.ledger{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 14px}
+.ledger div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.ledger div:last-child{border:0}
+.ledger dt{color:var(--mute)}
+.ledger dd{margin:0;font-family:var(--f-num);text-align:right}
+.ledger .pos{color:var(--good)} .ledger .neg{color:var(--bad)}
+.ledger .total{font-weight:700;font-size:17px}
+h2{margin:0;font-family:var(--f-display);font-size:26px}
+.medal{text-align:center;background:var(--sign);color:var(--sign-ink);border-radius:18px;padding:18px;border:3px solid var(--gold)}
+.medal.bust{border-color:var(--bad)}
+.medal h2{font-size:34px;letter-spacing:.1em}
+.medal .big{font-family:var(--f-num);font-size:32px;color:#ffd666}
+
+/* 圖鑑 */
+.dex{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:4px}
+.card.lock{opacity:.55}
+.cup{width:34px;height:44px;border:3px solid var(--ink);border-radius:4px 4px 12px 12px;position:relative;overflow:hidden;margin-bottom:4px}
+.cup i{position:absolute;left:0;right:0;bottom:0;height:62%}
+.card.lock .cup i{background:var(--line)!important}
+
+/* 自我測試 */
+.tests{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.tests li{display:grid;grid-template-columns:22px 1fr;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.tests .p{color:var(--good);font-weight:900}.tests .f{color:var(--bad);font-weight:900}
+.sum{font-weight:700;font-size:17px}
+
+
+/* ===== 精修層 ===== */
+body{background-image:radial-gradient(color-mix(in srgb,var(--ink) 9%,transparent) 1px,transparent 1.6px);background-size:18px 18px}
+.screen{animation:scrin .28s ease-out}
+@keyframes scrin{from{opacity:0;transform:translateY(8px)}}
+.btn{box-shadow:0 3px 0 var(--line)}
+.btn:active{transform:translateY(3px);box-shadow:none}
+.btn.primary{box-shadow:0 4px 0 color-mix(in srgb,var(--red) 58%,#000)}
+.btn.primary:active{transform:translateY(4px);box-shadow:none}
+.btn.small{box-shadow:0 2px 0 var(--line)}
+.hud{box-shadow:0 3px 0 color-mix(in srgb,var(--sign) 60%,#000)}
+.hud .cash b::before{content:"";display:inline-block;width:15px;height:15px;border-radius:50%;background:#ffd666;box-shadow:inset 0 0 0 3px #e3a62a;margin-right:7px;vertical-align:-1px}
+.hud .lbl em{font-style:normal;opacity:.9;margin-left:4px}
+.repbar{box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
+.storefront{flex:none;position:relative;filter:drop-shadow(0 4px 0 color-mix(in srgb,var(--sign) 55%,#000))}
+.awning{height:34px;border-radius:16px 16px 0 0;background:repeating-linear-gradient(90deg,var(--red) 0 30px,#f6f6f0 30px 60px);position:relative;z-index:2}
+.awning::after{content:"";position:absolute;left:0;right:0;bottom:-12px;height:12px;background:repeating-linear-gradient(90deg,var(--red) 0 30px,#f6f6f0 30px 60px);-webkit-mask:radial-gradient(circle at 15px 0,#000 14.5px,transparent 15px) 0 0/30px 100%;mask:radial-gradient(circle at 15px 0,#000 14.5px,transparent 15px) 0 0/30px 100%}
+.sign{position:relative;border-radius:0 0 18px 18px;border-top:0;padding-top:30px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18)}
+.sign::before,.sign::after{content:"";position:absolute;top:22px;width:20px;height:28px;border-radius:50%;background:var(--red);box-shadow:inset -4px -4px 0 rgba(0,0,0,.2),0 -6px 0 -2px var(--gold)}
+.sign::before{left:20px}.sign::after{right:20px}
+.sign h1{text-shadow:0 2px 0 rgba(0,0,0,.25)}
+.cupi{--c:#b8532b;flex:none;width:28px;height:38px;border:3px solid var(--ink);border-radius:4px 4px 12px 12px;position:relative;overflow:hidden;background:color-mix(in srgb,var(--panel) 80%,#fff)}
+.cupi::before{content:"";position:absolute;left:0;right:0;bottom:0;height:68%;background:var(--c)}
+.cupi::after{content:"";position:absolute;left:2px;top:4px;width:4px;height:45%;border-radius:3px;background:rgba(255,255,255,.55)}
+.cupi.pearl{background-image:radial-gradient(circle at 5px 5px,#26160c 3px,transparent 3.6px);background-size:9px 8px;background-position:0 100%;background-repeat:repeat-x}
+.cupi.mini{width:20px;height:27px;border-width:2px;border-radius:3px 3px 8px 8px}
+.cupi.big{width:44px;height:58px;border-width:4px;border-radius:5px 5px 16px 16px;margin-bottom:4px}
+.card.lock .cupi{--c:var(--line)}
+.hh{display:flex;align-items:center;gap:8px}
+.seat{box-shadow:0 3px 0 var(--line)}
+.seat.has{box-shadow:0 3px 0 color-mix(in srgb,var(--sign) 45%,transparent)}
+.face{background:var(--skin);box-shadow:inset 0 -4px 0 rgba(0,0,0,.08)}
+.face::before,.face::after{z-index:1}
+.hair{position:absolute;left:-2px;right:-2px;top:-4px;height:21px;border-radius:24px 24px 8px 8px;background:var(--hair,#2a1a10);z-index:0}
+.want{display:flex;align-items:center;gap:8px}
+.want small{margin-top:-1px}
+.pat{box-shadow:inset 0 1px 2px rgba(0,0,0,.15)}
+.daytop{grid-template-columns:1fr auto auto}
+.clock{grid-column:1/4;box-shadow:inset 0 1px 2px rgba(0,0,0,.15)}
+.clock u{background:linear-gradient(90deg,var(--gold),var(--red))}
+.dtime{font-size:15px;color:var(--mute)}
+.drink{flex-direction:row;align-items:center;gap:10px;box-shadow:0 4px 0 color-mix(in srgb,var(--sign) 70%,transparent)}
+.drink:active{transform:translateY(3px);box-shadow:none}
+.drink .dt{display:flex;flex-direction:column;gap:0}
+.drink.off{justify-content:center;box-shadow:none}
+.drink.out{box-shadow:none}
+.drink.low .st{background:var(--gold);color:#2a1d00}
+.drink .st{top:6px;right:8px}
+.float{text-shadow:0 0 3px var(--bg),0 0 3px var(--bg),0 0 6px var(--bg);font-size:22px}
+.toast{box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.overlay.closing{background:color-mix(in srgb,var(--sign) 94%,transparent);color:var(--sign-ink)}
+.overlay.closing h2{font-size:44px;letter-spacing:.15em;animation:pop .5s}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+.medal{position:relative;overflow:hidden}
+.stars{font-size:30px;letter-spacing:.2em;color:#ffd666;margin:2px 0}
+.stars i{font-style:normal}.stars i.off{color:rgba(255,255,255,.22)}
+.conf{position:absolute;top:-12px;width:8px;height:12px;border-radius:2px;animation:fall 2.4s linear infinite}
+@keyframes fall{to{transform:translateY(260px) rotate(540deg);opacity:.2}}
+.ledger{box-shadow:0 3px 0 var(--line)}
+.goalbox,.forecast,.item,.card{box-shadow:0 2px 0 var(--line)}
+@media (prefers-reduced-motion:reduce){.conf{display:none}}
+.toast{top:auto;bottom:88px}
+.toast.inday{bottom:228px}
+.seats{flex:1 1 auto;min-height:0;grid-template-rows:1fr 1fr;max-height:400px}
+.seat{align-content:center}
+
+.seat{min-height:112px;grid-template-columns:44px 1fr}
+.want{color:var(--red);font-size:16px;font-weight:500}
+.wname{grid-column:1/3;font-weight:900;font-size:17px;white-space:nowrap;line-height:1.2}
+.meta{display:flex;align-items:center;gap:8px}
+.drink .st{position:static;font-size:13px;padding:0 8px}
+.drink.out .st{background:var(--bad);color:#fff}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-height:640px){.seat{min-height:92px}.drink{min-height:70px}.sign h1{font-size:38px}}
+html,body{margin:0}
+</style>
+</head>
+<body>
+
+
+<div id="app">
+  <header class="hud" id="hud" hidden>
+    <div><span class="lbl">天數</span><b id="hDay">1/10</b></div>
+    <div class="cash" id="hCashBox"><span class="lbl">現金</span><b id="hCash">$150</b></div>
+    <div><span class="lbl">聲望 <em id="hRepN" class="num">50</em></span><i class="repbar"><u id="hRep"></u></i></div>
+  </header>
+
+  <!-- 首頁 -->
+  <section class="screen" data-s="home" id="sHome">
+    <div class="storefront"><div class="awning"></div><div class="sign"><small>巷口小生意</small><h1>巷口茶鋪</h1><div>十天經營戰</div></div></div>
+    <div class="goalbox">目標：十天內把現金賺到 <b id="goalNum">$2,400</b><div id="bestLine" class="num" style="font-size:13px;color:var(--mute);margin-top:2px" hidden></div></div>
+    <div class="scroll">
+      <ol class="rules">
+        <li><span class="n">1</span><span>營業時，客人頭上會顯示想喝的飲料。<b>點下方同名按鈕出餐</b>。</span></li>
+        <li><span class="n">2</span><span>客人還有耐心（綠色）時出餐，多拿 <b>20% 小費</b>。</span></li>
+        <li><span class="n">3</span><span>點錯會浪費 1 杯並扣聲望；客人等到離開也扣聲望。<b>聲望越高客人越多</b>。</span></li>
+        <li><span class="n">4</span><span>每天打烊要付 <b>房租 $25</b>。現金低於 0 就倒閉。</span></li>
+        <li><span class="n">5</span><span>打烊後 <b>進貨、升級、解鎖新飲料</b>。每天天氣不同，客流和耐心都會變。</span></li>
+      </ol>
+    </div>
+    <div class="cta">
+      <button class="btn primary" id="bStart">開始經營</button>
+      <div class="row2"><button class="btn" id="bDex">圖鑑</button><button class="btn" id="bTest">自我測試</button></div>
+    </div>
+  </section>
+
+  <!-- 準備 -->
+  <section class="screen" data-s="prep" id="sPrep" hidden>
+    <div class="forecast" id="pForecast"></div>
+    <div class="tabs" role="tablist" id="pTabs">
+      <button class="tab" role="tab" data-tab="stock">進貨</button>
+      <button class="tab" role="tab" data-tab="upg">升級</button>
+      <button class="tab" role="tab" data-tab="new">新品</button>
+      <button class="tab" role="tab" data-tab="dex">圖鑑</button>
+    </div>
+    <div class="scroll" id="pList"></div>
+    <button class="btn primary" id="bOpen">開始營業</button>
+  </section>
+
+  <!-- 營業 -->
+  <section class="screen" data-s="day" id="sDay" hidden>
+    <div class="daytop"><div class="evt" id="dEvt"></div><span class="num dtime" id="dTime"></span><button class="btn small" id="bPause">暫停</button><div class="clock"><u id="dClock"></u></div></div>
+    <div class="seats" id="dSeats"></div>
+    <div class="daystats"><span id="dSold"></span><span id="dLost"></span></div>
+    <div class="menu" id="dMenu"></div>
+    <div class="overlay closing" id="ovClose" hidden><h2>打烊囉</h2><div id="ovCloseSub" class="num"></div></div>
+    <div class="overlay" id="ovPause" hidden><h2>暫停中</h2><button class="btn primary" id="bResume" style="min-width:200px">繼續營業</button></div>
+  </section>
+
+  <!-- 日報 -->
+  <section class="screen" data-s="report" id="sReport" hidden>
+    <h2 id="rTitle"></h2>
+    <dl class="ledger" id="rLedger"></dl>
+    <p id="rNote" style="margin:0;color:var(--mute)"></p>
+    <div style="flex:1"></div>
+    <button class="btn primary" id="bNext">下一天</button>
+  </section>
+
+  <!-- 最終 -->
+  <section class="screen" data-s="final" id="sFinal" hidden>
+    <div class="medal" id="fMedal"></div>
+    <dl class="ledger" id="fLedger"></dl>
+    <div style="flex:1"></div>
+    <div class="row2"><button class="btn" id="bFDex">圖鑑</button><button class="btn primary" id="bAgain" style="font-size:17px">再玩一次</button></div>
+  </section>
+
+  <!-- 圖鑑 -->
+  <section class="screen" data-s="dex" id="sDex" hidden>
+    <h2>飲料圖鑑</h2>
+    <div class="scroll" id="dexBox"></div>
+    <button class="btn primary" id="bDexBack">返回</button>
+  </section>
+
+  <!-- 測試 -->
+  <section class="screen" data-s="test" id="sTest" hidden>
+    <h2>自我測試</h2>
+    <div class="sum" id="tSum"></div>
+    <div class="scroll"><ul class="tests" id="tList"></ul></div>
+    <button class="btn primary" id="bTestBack">返回</button>
+  </section>
+
+  <div class="fx" id="fx"></div>
+  <div class="toast" id="toast" hidden></div>
+</div>
+
+<script>
+/*LOGIC_START*/
+var CFG = { days: 10, dayLen: 36, rent: 25, seats: 4, startCash: 150, goal: 2400, repStart: 50, basePatience: 12, baseGap: 2.8, maxUp: 3, tipRatio: 0.6, tipRate: 0.2 };
+var PRODUCTS = [
+  { id: 'tea',   name: '古早味紅茶', cost: 5,  price: 18,  unlock: 0 },
+  { id: 'boba',  name: '珍珠奶茶',   cost: 10, price: 40,  unlock: 180 },
+  { id: 'fruit', name: '鮮果茶',     cost: 16, price: 65,  unlock: 450 },
+  { id: 'taro',  name: '芋頭鮮奶',   cost: 28, price: 110, unlock: 900 }
+];
+var UPGRADES = [
+  { id: 'flow',   name: '招牌燈箱', desc: '客流量 +20%／級',       costs: [120, 260, 450] },
+  { id: 'seat',   name: '舒適座椅', desc: '客人耐心 +15%／級',     costs: [100, 220, 380] },
+  { id: 'fridge', name: '大冰箱',   desc: '每種庫存上限 +10／級',  costs: [80, 180, 320] }
+];
+var EVENTS = {
+  normal: { name: '一般營業日', flow: 1,   pat: 1,   text: '客人不多不少' },
+  rain:   { name: '下雨天',     flow: 0.6, pat: 1.2, text: '客人較少，但比較有耐心' },
+  fest:   { name: '廟會慶典',   flow: 1.6, pat: 0.8, text: '人潮暴增，客人沒耐心' }
+};
+
+function P(id) { for (var i = 0; i < PRODUCTS.length; i++) if (PRODUCTS[i].id === id) return PRODUCTS[i]; return null; }
+function U(id) { for (var i = 0; i < UPGRADES.length; i++) if (UPGRADES[i].id === id) return UPGRADES[i]; return null; }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function rnd(s) { s.rs = (s.rs + 0x6D2B79F5) | 0; var t = s.rs; t = Math.imul(t ^ (t >>> 15), 1 | t); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+function cap(s) { return 20 + 10 * s.upg.fridge; }
+function flowMult(s) { return (1 + 0.2 * s.upg.flow) * (0.6 + 0.8 * s.rep / 100) * EVENTS[s.event].flow; }
+function patienceOf(s) { return CFG.basePatience * (1 + 0.15 * s.upg.seat) * EVENTS[s.event].pat * Math.max(0.7, 1 - 0.03 * (s.day - 1)); }
+function blankToday() { return { sold: 0, income: 0, tips: 0, lost: 0, wasted: 0, turned: 0, rent: 0, repStart: 0 }; }
+
+function newState(seed) {
+  var stock = {}, unl = {}, sold = {};
+  PRODUCTS.forEach(function (p) { stock[p.id] = 0; unl[p.id] = p.unlock === 0; sold[p.id] = 0; });
+  stock.tea = 10;
+  return { rs: seed | 0, phase: 'prep', day: 1, cash: CFG.startCash, cashStartDay: CFG.startCash, rep: CFG.repStart,
+    stock: stock, unlocked: unl, upg: { flow: 0, seat: 0, fridge: 0 }, event: 'normal', t: 0, spawnIn: 0, queue: [], nextId: 1,
+    today: blankToday(), sold: sold, events: [], over: false, reason: '', won: false };
+}
+function pickEvent(s) { if (s.day === 1) return 'normal'; var r = rnd(s); return r < 0.5 ? 'normal' : r < 0.75 ? 'rain' : 'fest'; }
+
+function buy(s, id, qty) {
+  if (s.phase !== 'prep' || !s.unlocked[id]) return { ok: false, why: 'state' };
+  var p = P(id), room = cap(s) - s.stock[id];
+  if (room <= 0) return { ok: false, why: 'full' };
+  var afford = Math.floor(s.cash / p.cost);
+  if (afford <= 0) return { ok: false, why: 'cash' };
+  var n = Math.min(qty, room, afford);
+  s.cash -= n * p.cost; s.stock[id] += n;
+  return { ok: true, n: n, cost: n * p.cost };
+}
+function upgrade(s, id) {
+  if (s.phase !== 'prep') return { ok: false, why: 'state' };
+  var u = U(id), lv = s.upg[id];
+  if (lv >= CFG.maxUp) return { ok: false, why: 'max' };
+  var c = u.costs[lv];
+  if (s.cash < c) return { ok: false, why: 'cash' };
+  s.cash -= c; s.upg[id] = lv + 1;
+  return { ok: true, cost: c, level: lv + 1 };
+}
+function unlock(s, id) {
+  if (s.phase !== 'prep') return { ok: false, why: 'state' };
+  var p = P(id);
+  if (s.unlocked[id]) return { ok: false, why: 'owned' };
+  if (s.cash < p.unlock) return { ok: false, why: 'cash' };
+  s.cash -= p.unlock; s.unlocked[id] = true;
+  return { ok: true, cost: p.unlock };
+}
+function startDay(s) {
+  if (s.phase !== 'prep') return false;
+  s.phase = 'day'; s.t = 0; s.spawnIn = 0.8; s.queue = []; s.today = blankToday(); s.today.repStart = s.rep;
+  return true;
+}
+function freeSeat(s) {
+  var used = {}; s.queue.forEach(function (c) { used[c.seat] = 1; });
+  for (var i = 0; i < CFG.seats; i++) if (!used[i]) return i;
+  return -1;
+}
+function spawnCustomer(s) {
+  var seat = freeSeat(s);
+  if (seat < 0) { s.today.turned++; return; }
+  var ids = PRODUCTS.filter(function (p) { return s.unlocked[p.id]; }), w = [], tot = 0;
+  ids.forEach(function (p) { var x = p.id === 'tea' ? 1.5 : 1; w.push(x); tot += x; });
+  var r = rnd(s) * tot, pick = ids[ids.length - 1];
+  for (var i = 0; i < ids.length; i++) { r -= w[i]; if (r < 0) { pick = ids[i]; break; } }
+  var max = patienceOf(s);
+  s.queue.push({ id: s.nextId++, want: pick.id, seat: seat, p: max, max: max });
+  s.events.push({ k: 'arrive', seat: seat });
+}
+function step(s, dt) {
+  if (s.phase !== 'day') return;
+  dt = Math.min(dt, 0.1); s.t += dt; s.spawnIn -= dt;
+  while (s.spawnIn <= 0 && s.t < CFG.dayLen - 5) { spawnCustomer(s); s.spawnIn += CFG.baseGap / flowMult(s) * (0.7 + 0.6 * rnd(s)); }
+  for (var i = s.queue.length - 1; i >= 0; i--) {
+    var c = s.queue[i]; c.p -= dt;
+    if (c.p <= 0) { s.queue.splice(i, 1); s.rep = clamp(s.rep - 3, 0, 100); s.today.lost++; s.events.push({ k: 'leave', seat: c.seat }); }
+  }
+  if (s.t >= CFG.dayLen) endDay(s);
+}
+function endDay(s) {
+  s.queue = []; s.today.rent = CFG.rent; s.cash -= CFG.rent; s.phase = 'report';
+  if (s.cash < 0) { s.over = true; s.reason = 'bankrupt'; }
+}
+function serve(s, id) {
+  if (s.phase !== 'day' || !s.unlocked[id]) return { ok: false, why: 'state' };
+  if (s.stock[id] <= 0) { s.events.push({ k: 'nostock', id: id }); return { ok: false, why: 'nostock' }; }
+  var idx = -1;
+  for (var i = 0; i < s.queue.length; i++) if (s.queue[i].want === id) { idx = i; break; }
+  s.stock[id]--;
+  if (idx < 0) { s.today.wasted++; s.rep = clamp(s.rep - 1, 0, 100); s.events.push({ k: 'waste', id: id }); return { ok: false, why: 'nobody' }; }
+  var c = s.queue[idx], price = P(id).price, tip = c.p / c.max > CFG.tipRatio, amount = tip ? Math.round(price * (1 + CFG.tipRate)) : price;
+  s.queue.splice(idx, 1);
+  s.cash += amount; s.rep = clamp(s.rep + 1, 0, 100);
+  s.today.sold++; s.today.income += amount; if (tip) s.today.tips += amount - price; s.sold[id]++;
+  s.events.push({ k: 'sale', id: id, seat: c.seat, amount: amount, tip: tip });
+  return { ok: true, amount: amount, tip: tip };
+}
+function advance(s) {
+  if (s.phase !== 'report') return false;
+  if (s.over || s.day >= CFG.days) { s.phase = 'final'; s.won = !s.over && s.cash >= CFG.goal; return true; }
+  s.day++; s.event = pickEvent(s); s.cashStartDay = s.cash; s.phase = 'prep';
+  return true;
+}
+function grade(s) {
+  if (s.over) return { key: 'bust', name: '倒閉了', note: '現金低於 0，小店撐不下去。' };
+  var r = s.cash / CFG.goal;
+  if (r >= 1.5) return { key: 'gold', name: '金牌老闆', note: '生意興隆，整條巷子都在排隊。' };
+  if (r >= 1) return { key: 'silver', name: '銀牌老闆', note: '達成目標，小店站穩了。' };
+  if (r >= 0.6) return { key: 'bronze', name: '銅牌老闆', note: '有賺錢，但離目標還差一點。' };
+  return { key: 'low', name: '再接再厲', note: '撐過十天，下次試試不同的進貨與升級順序。' };
+}
+
+/* ---------- 自動測試 ---------- */
+function eq(a, b, m) { if (a !== b) throw new Error((m || '') + ' 預期 ' + b + '，實際 ' + a); }
+function ok(c, m) { if (!c) throw new Error(m || '條件不成立'); }
+function mk() { var s = newState(1); return s; }
+function day(s) { startDay(s); s.spawnIn = 999; return s; }
+function seatCust(s, want, p) { var max = patienceOf(s); s.queue.push({ id: s.nextId++, want: want, seat: freeSeat(s), p: p == null ? max : p, max: max }); }
+
+function botDay(s, reaction) {
+  var acc = 0;
+  while (s.phase === 'day') {
+    step(s, 0.1); acc += 0.1;
+    if (acc >= reaction) { acc = 0; if (s.queue.length) { var c = s.queue[0]; serve(s, c.want); } }
+    s.events.length = 0;
+  }
+}
+function botPrep(s, invest) {
+  PRODUCTS.forEach(function (p) { if (s.unlocked[p.id]) buy(s, p.id, 12 - s.stock[p.id] > 0 ? 12 - s.stock[p.id] : 0); });
+  if (!invest) return;
+  for (var k = 0; k < 6; k++) {
+    var did = false;
+    for (var i = 0; i < PRODUCTS.length; i++) { var p = PRODUCTS[i]; if (!s.unlocked[p.id] && s.cash >= p.unlock + 80) { unlock(s, p.id); did = true; break; } }
+    if (did) { buy(s, PRODUCTS[i].id, 12); continue; }
+    var order = ['flow', 'fridge', 'seat'];
+    for (var j = 0; j < order.length; j++) { var u = U(order[j]), lv = s.upg[order[j]]; if (lv < CFG.maxUp && s.cash >= u.costs[lv] + 80) { upgrade(s, order[j]); did = true; break; } }
+    if (!did) break;
+  }
+  PRODUCTS.forEach(function (p) { if (s.unlocked[p.id]) buy(s, p.id, Math.max(0, 14 - s.stock[p.id])); });
+}
+function runBot(seed, opts) {
+  var s = newState(seed);
+  while (s.phase !== 'final') {
+    if (s.phase === 'prep') { botPrep(s, opts.invest); startDay(s); }
+    else if (s.phase === 'day') { if (opts.play) botDay(s, opts.reaction); else { while (s.phase === 'day') { step(s, 0.1); s.events.length = 0; } } }
+    else if (s.phase === 'report') advance(s);
+  }
+  return s;
+}
+
+var TESTS = [
+  ['開局：現金 $150、聲望 50、紅茶 10 杯、其餘未解鎖', function () {
+    var s = mk(); eq(s.cash, 150); eq(s.rep, 50); eq(s.stock.tea, 10); eq(s.unlocked.tea, true); eq(s.unlocked.boba, false); eq(s.phase, 'prep');
+  }],
+  ['進貨：+5 杯扣 $25；超過上限只補到上限', function () {
+    var s = mk(); var r = buy(s, 'tea', 5); eq(r.n, 5); eq(s.cash, 125); eq(s.stock.tea, 15);
+    r = buy(s, 'tea', 99); eq(s.stock.tea, 20, '上限 20'); eq(r.n, 5); r = buy(s, 'tea', 1); eq(r.why, 'full');
+  }],
+  ['進貨：現金不足只買得起的量；一毛都沒有就失敗', function () {
+    var s = mk(); s.cash = 12; var r = buy(s, 'tea', 5); eq(r.n, 2); eq(s.cash, 2); r = buy(s, 'tea', 5); eq(r.why, 'cash');
+  }],
+  ['出餐正確：收入、聲望 +1、客人離座、記錄銷量', function () {
+    var s = day(mk()); seatCust(s, 'tea'); var r = serve(s, 'tea');
+    eq(r.ok, true); eq(s.cash, 150 + 22, '有小費 18*1.2=22'); eq(s.rep, 51); eq(s.queue.length, 0); eq(s.stock.tea, 9); eq(s.sold.tea, 1);
+  }],
+  ['小費：客人耐心剩 60% 以下沒有小費', function () {
+    var s = day(mk()); var m = patienceOf(s); seatCust(s, 'tea', m * 0.5); var r = serve(s, 'tea'); eq(r.tip, false); eq(s.cash, 150 + 18);
+  }],
+  ['點錯飲料：浪費 1 杯、聲望 -1、不收錢', function () {
+    var s = day(mk()); s.unlocked.boba = true; s.stock.boba = 3; seatCust(s, 'tea'); var r = serve(s, 'boba');
+    eq(r.why, 'nobody'); eq(s.stock.boba, 2); eq(s.rep, 49); eq(s.cash, 150); eq(s.queue.length, 1); eq(s.today.wasted, 1);
+  }],
+  ['缺貨：庫存 0 時出餐沒有任何效果', function () {
+    var s = day(mk()); s.stock.tea = 0; seatCust(s, 'tea'); var r = serve(s, 'tea'); eq(r.why, 'nostock'); eq(s.cash, 150); eq(s.queue.length, 1); eq(s.rep, 50);
+  }],
+  ['客人等太久離開：聲望 -3、流失 +1', function () {
+    var s = day(mk()); seatCust(s, 'tea', 0.05); step(s, 0.1); eq(s.queue.length, 0); eq(s.rep, 47); eq(s.today.lost, 1);
+  }],
+  ['座位已滿時新客人直接離開（不扣聲望）', function () {
+    var s = day(mk()); for (var i = 0; i < 4; i++) seatCust(s, 'tea'); var rep = s.rep; spawnCustomer(s); eq(s.queue.length, 4); eq(s.today.turned, 1); eq(s.rep, rep);
+  }],
+  ['升級：現金不足失敗；成功扣款升級；三級後 MAX', function () {
+    var s = mk(); s.cash = 50; eq(upgrade(s, 'flow').why, 'cash'); s.cash = 1000;
+    var r = upgrade(s, 'flow'); eq(r.cost, 120); eq(s.upg.flow, 1); eq(s.cash, 880); upgrade(s, 'flow'); upgrade(s, 'flow'); eq(s.upg.flow, 3); eq(upgrade(s, 'flow').why, 'max');
+  }],
+  ['升級效果：大冰箱提高上限、座椅增加耐心、燈箱增加客流', function () {
+    var s = mk(); s.cash = 5000; var cp = cap(s), pt = patienceOf(s), fl = flowMult(s);
+    upgrade(s, 'fridge'); upgrade(s, 'seat'); upgrade(s, 'flow'); ok(cap(s) > cp); ok(patienceOf(s) > pt); ok(flowMult(s) > fl);
+  }],
+  ['解鎖新品：扣款後可進貨、客人會點；重複解鎖無效', function () {
+    var s = mk(); s.cash = 200; var r = unlock(s, 'boba'); eq(r.ok, true); eq(s.cash, 20); eq(unlock(s, 'boba').why, 'owned'); eq(buy(s, 'boba', 2).n, 2);
+    var t = mk(); eq(unlock(t, 'taro').why, 'cash');
+  }],
+  ['房租：打烊扣 $25；現金低於 0 倒閉並進入結算', function () {
+    var s = mk(); s.cash = 30; startDay(s); s.t = CFG.dayLen - 0.05; step(s, 0.1); eq(s.phase, 'report'); eq(s.cash, 5); eq(s.over, false);
+    var b = mk(); b.cash = 10; startDay(b); b.t = CFG.dayLen - 0.05; step(b, 0.1); eq(b.over, true); advance(b); eq(b.phase, 'final'); eq(grade(b).key, 'bust');
+  }],
+  ['天氣：下雨客流較少耐心較高；慶典客流多耐心低', function () {
+    var a = mk(), r = mk(), f = mk(); r.event = 'rain'; f.event = 'fest';
+    ok(flowMult(r) < flowMult(a) && flowMult(f) > flowMult(a)); ok(patienceOf(r) > patienceOf(a) && patienceOf(f) < patienceOf(a));
+  }],
+  ['聲望影響客流：聲望高的店客人更多', function () {
+    var lo = mk(), hi = mk(); lo.rep = 10; hi.rep = 90; ok(flowMult(hi) > flowMult(lo));
+  }],
+  ['進貨/升級只能在準備階段，營業中無效', function () {
+    var s = day(mk()); eq(buy(s, 'tea', 1).why, 'state'); eq(upgrade(s, 'flow').why, 'state'); eq(unlock(s, 'boba').why, 'state');
+  }],
+  ['同一種子結果完全相同', function () {
+    var a = runBot(5, { invest: true, play: true, reaction: 0.8 }), b = runBot(5, { invest: true, play: true, reaction: 0.8 });
+    eq(JSON.stringify(a), JSON.stringify(b));
+  }],
+  ['完整十天：數值不變式（庫存、聲望、天數都在合理範圍）', function () {
+    var s = newState(9);
+    while (s.phase !== 'final') {
+      if (s.phase === 'prep') { botPrep(s, true); startDay(s); } else if (s.phase === 'day') { step(s, 0.1); if (s.queue.length && rnd(s) < 0.3) serve(s, s.queue[0].want); s.events.length = 0; } else advance(s);
+      PRODUCTS.forEach(function (p) { ok(s.stock[p.id] >= 0 && s.stock[p.id] <= cap(s), '庫存超出範圍'); });
+      ok(s.rep >= 0 && s.rep <= 100, '聲望超出範圍'); ok(s.day >= 1 && s.day <= CFG.days, '天數超出範圍');
+    }
+  }],
+  ['平衡：不玩直接放著 → 倒閉', function () {
+    var s = runBot(3, { invest: false, play: false }); eq(s.over, true);
+  }],
+  ['平衡：會出餐但不投資，勝過放著不管，但達不到目標', function () {
+    var a = runBot(3, { invest: false, play: true, reaction: 0.8 }); ok(a.cash > 150, '應該有賺'); ok(a.cash < CFG.goal, '不投資不該達標：' + a.cash);
+  }],
+  ['平衡：會出餐又懂得投資 → 達成目標', function () {
+    var wins = 0; for (var sd = 1; sd <= 5; sd++) { var s = runBot(sd, { invest: true, play: true, reaction: 0.8 }); if (s.cash >= CFG.goal) wins++; }
+    ok(wins >= 3, '5 次只贏 ' + wins + ' 次');
+  }]
+];
+function runTests() {
+  var out = [];
+  TESTS.forEach(function (t) { try { t[1](); out.push({ name: t[0], ok: true }); } catch (e) { out.push({ name: t[0], ok: false, msg: String(e.message || e) }); } });
+  return out;
+}
+/*LOGIC_END*/
+
+</script>
+<script>
+(function () {
+  var $ = function (q) { return document.querySelector(q); };
+  var S = newState(Date.now() & 0x7fffffff), screen = 'home', tab = 'stock', paused = false, last = 0, backTo = 'home';
+  var COLORS = { tea: '#b8532b', boba: '#7d5233', fruit: '#e39a1f', taro: '#8d6fb8' };
+  var KEY = 'xiangkou-tea-v1', store = { best: 0, plays: 0, sold: {}, seen: {} };
+  try { var raw = localStorage.getItem(KEY); if (raw) store = Object.assign(store, JSON.parse(raw)); } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
+  var money = function (n) { n = Math.round(n); return (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US'); };
+  var SKINS = ['#f2c9a0', '#e6b38a', '#c98f63', '#f7d6b8', '#a8714a'], HAIRS = ['#2a1a10', '#5a3420', '#1f2a44', '#6b2d2d', '#3b3b3b', '#7a5a1a'], closing = false;
+  function cupHtml(id, size) { return '<span class="cupi ' + size + (id === 'boba' ? ' pearl' : '') + '" style="--c:' + COLORS[id] + '"></span>'; }
+  function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+  function countUp(el, to) { var t0 = performance.now(); (function f(n) { var k = Math.min(1, (n - t0) / 900); el.textContent = money(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); })(t0); }
+  $('#goalNum').textContent = money(CFG.goal);
+
+  /* 畫面切換 */
+  function show(name) {
+    screen = name;
+    document.querySelectorAll('.screen').forEach(function (el) { el.hidden = el.dataset.s !== name; });
+    $('#hud').hidden = !(name === 'prep' || name === 'day' || name === 'report');
+    var bl = $('#bestLine'); if (bl) { bl.hidden = !(name === 'home' && store.best > 0); bl.textContent = '最高紀錄 ' + money(store.best); }
+    renderHud();
+  }
+  var prevCash = null;
+  function renderHud() {
+    $('#hDay').textContent = S.day + '/' + CFG.days;
+    $('#hCash').textContent = money(S.cash);
+    $('#hRep').style.width = S.rep + '%'; $('#hRep').style.background = S.rep < 30 ? 'var(--bad)' : ''; $('#hRepN').textContent = Math.round(S.rep);
+    if (prevCash !== null && prevCash !== S.cash) { var b = $('#hCashBox'); b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); }
+    prevCash = S.cash;
+  }
+  var tt;
+  function say(msg) { var t = $('#toast'); t.className = 'toast' + (screen === 'day' ? ' inday' : ''); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(function () { t.hidden = true; }, 1800); }
+  function floatAt(el, text, cls) {
+    var fx = $('#fx'), a = $('#app').getBoundingClientRect(), r = el.getBoundingClientRect(), f = document.createElement('div');
+    f.className = 'float ' + (cls || ''); f.textContent = text;
+    f.style.left = (r.left - a.left + r.width / 2) + 'px'; f.style.top = (r.top - a.top + r.height / 3) + 'px';
+    fx.appendChild(f); setTimeout(function () { f.remove(); }, 1000);
+  }
+  function flash(el, cls, ms) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(function () { el.classList.remove(cls); }, ms || 450); }
+
+  /* 準備畫面 */
+  function renderPrep() {
+    var ev = EVENTS[S.event];
+    $('#pForecast').innerHTML = '<b>第 ' + S.day + ' 天預報</b><span>' + ev.name + '：' + ev.text + '</span>';
+    document.querySelectorAll('#pTabs .tab').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === tab); });
+    var h = '';
+    if (tab === 'stock') {
+      PRODUCTS.forEach(function (p) {
+        if (!S.unlocked[p.id]) return;
+        var full = S.stock[p.id] >= cap(S), poor = S.cash < p.cost;
+        h += '<div class="item"><div><h3 class="hh">' + cupHtml(p.id, 'mini') + p.name + '<span class="tag num">成本 $' + p.cost + '</span></h3><p>庫存 <b class="num">' + S.stock[p.id] + '</b>／' + cap(S) + ' 杯，每杯賺 <b class="num">$' + (p.price - p.cost) + '</b></p></div>' +
+          '<div class="acts"><button class="btn small" data-act="buy" data-id="' + p.id + '" data-n="5"' + (full || poor ? ' disabled' : '') + '>' + (full ? '已滿' : poor ? '沒錢' : '+5') + '</button>' +
+          '<button class="btn small" data-act="buy" data-id="' + p.id + '" data-n="99"' + (full || poor ? ' disabled' : '') + '>補滿</button></div>' +
+          '<div class="stockbar" style="grid-column:1/3"><u style="width:' + (S.stock[p.id] / cap(S) * 100) + '%"></u></div></div>';
+      });
+    } else if (tab === 'upg') {
+      UPGRADES.forEach(function (u) {
+        var lv = S.upg[u.id], max = lv >= CFG.maxUp, c = u.costs[lv], poor = !max && S.cash < c, pips = '';
+        for (var i = 0; i < CFG.maxUp; i++) pips += '<i class="' + (i < lv ? 'on' : '') + '"></i>';
+        h += '<div class="item"><div><h3>' + u.name + '<span class="pips">' + pips + '</span></h3><p>' + u.desc + '</p></div>' +
+          '<div class="acts"><button class="btn small" data-act="upg" data-id="' + u.id + '"' + (max || poor ? ' disabled' : '') + '>' + (max ? '已滿級' : money(c) + (poor ? '（不足）' : '')) + '</button></div></div>';
+      });
+    } else if (tab === 'new') {
+      PRODUCTS.forEach(function (p) {
+        var own = S.unlocked[p.id], poor = !own && S.cash < p.unlock;
+        h += '<div class="item' + (own ? '' : ' locked') + '"><div><h3 class="hh">' + cupHtml(p.id, 'mini') + p.name + '</h3><p>售價 <b class="num">$' + p.price + '</b>，成本 $' + p.cost + '，每杯賺 <b class="num">$' + (p.price - p.cost) + '</b></p></div>' +
+          '<div class="acts"><button class="btn small" data-act="unlock" data-id="' + p.id + '"' + (own || poor ? ' disabled' : '') + '>' + (own ? '已解鎖' : money(p.unlock) + (poor ? '（不足）' : '')) + '</button></div></div>';
+      });
+    } else { h = dexHtml(); }
+    $('#pList').innerHTML = h;
+  }
+  $('#pTabs').addEventListener('click', function (e) { var b = e.target.closest('.tab'); if (!b) return; tab = b.dataset.tab; renderPrep(); });
+  $('#pList').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-act]'); if (!b || b.disabled) return;
+    var id = b.dataset.id, r, p = P(id);
+    if (b.dataset.act === 'buy') { r = buy(S, id, +b.dataset.n); if (r.ok) say('進貨 ' + p.name + ' ' + r.n + ' 杯，花 ' + money(r.cost)); }
+    else if (b.dataset.act === 'upg') { r = upgrade(S, id); if (r.ok) say(U(id).name + ' 升到 ' + r.level + ' 級！'); }
+    else if (b.dataset.act === 'unlock') { r = unlock(S, id); if (r.ok) { say('解鎖 ' + p.name + '！記得進貨'); store.seen[id] = true; save(); } }
+    if (r && !r.ok) say({ cash: '現金不足', full: '庫存已滿', max: '已是最高等級' }[r.why] || '不能這樣做');
+    renderHud(); renderPrep();
+  });
+  $('#bOpen').addEventListener('click', function () {
+    var total = 0; PRODUCTS.forEach(function (p) { total += S.stock[p.id]; });
+    if (total === 0) { say('沒有任何庫存，先進貨吧'); return; }
+    startDay(S); paused = false; $('#toast').hidden = true; buildDay(); show('day');
+  });
+
+  /* 圖鑑 */
+  function dexHtml() {
+    var h = '<div class="dex">';
+    PRODUCTS.forEach(function (p) {
+      var got = S.unlocked[p.id] || store.seen[p.id], total = (store.sold[p.id] || 0) + (S.sold[p.id] || 0);
+      h += '<div class="card' + (got ? '' : ' lock') + '">' + cupHtml(p.id, 'big') + '<b>' + (got ? p.name : '？？？') + '</b>' +
+        '<span class="num" style="font-size:13px">' + (got ? '售價 $' + p.price + '・累計 ' + total + ' 杯' : '解鎖費 ' + money(p.unlock)) + '</span></div>';
+    });
+    return h + '</div><p style="color:var(--mute);font-size:13px">最高資產紀錄 <b class="num">' + money(store.best) + '</b>・已玩 ' + store.plays + ' 場</p>';
+  }
+  $('#bDex').addEventListener('click', function () { $('#dexBox').innerHTML = dexHtml(); show('dex'); });
+  $('#bFDex').addEventListener('click', function () { $('#dexBox').innerHTML = dexHtml(); backTo = 'final'; show('dex'); });
+  $('#bDexBack').addEventListener('click', function () { var to = backTo; backTo = 'home'; show(to); });
+
+  /* 營業畫面 */
+  function buildDay() {
+    var ev = EVENTS[S.event]; $('#dEvt').textContent = ev.name + '・' + ev.text;
+    var seats = '', menu = '';
+    for (var i = 0; i < CFG.seats; i++) seats += '<div class="seat" data-seat="' + i + '"><div class="empty">空位</div><div class="who"><div class="face"><i class="hair"></i></div><div class="want"></div><div class="wname"></div><div class="pat"><u></u></div></div></div>';
+    $('#dSeats').innerHTML = seats;
+    PRODUCTS.forEach(function (p) {
+      menu += S.unlocked[p.id]
+        ? '<button class="drink" data-id="' + p.id + '">' + cupHtml(p.id, '') + '<span class="dt"><b>' + p.name + '</b><span class="meta"><span class="pr">$' + p.price + '</span><span class="st num"></span></span></span></button>'
+        : '<button class="drink off" disabled>未解鎖</button>';
+    });
+    $('#dMenu').innerHTML = menu; $('#ovPause').hidden = true; $('#ovClose').hidden = true; closing = false; $('#bPause').textContent = '暫停';
+  }
+  $('#dMenu').addEventListener('click', function (e) {
+    var b = e.target.closest('.drink[data-id]'); if (!b || paused || S.phase !== 'day') return;
+    serve(S, b.dataset.id); drain();
+  });
+  $('#bPause').addEventListener('click', function () { setPause(!paused); });
+  $('#bResume').addEventListener('click', function () { setPause(false); });
+  function setPause(v) { if (S.phase !== 'day') return; paused = v; $('#ovPause').hidden = !v; $('#bPause').textContent = v ? '繼續' : '暫停'; }
+  document.addEventListener('visibilitychange', function () { if (document.hidden && screen === 'day') setPause(true); });
+
+  function seatEl(i) { return $('.seat[data-seat="' + i + '"]'); }
+  function drink(id) { return $('.drink[data-id="' + id + '"]'); }
+  function drain() {
+    var ev = S.events; S.events = [];
+    ev.forEach(function (e) {
+      if (e.k === 'sale') {
+        var el = seatEl(e.seat); flash(el, 'cheer'); floatAt(el, '+$' + e.amount + (e.tip ? ' 小費' : ''), e.tip ? 'tip' : '');
+        var d = drink(e.id); if (d) flash(d, 'pulse', 260); buzz(12);
+      } else if (e.k === 'arrive') { flash(seatEl(e.seat), 'arrive', 380); }
+      else if (e.k === 'leave') { var s = seatEl(e.seat); flash(s, 'angry'); floatAt(s, '聲望 -3', 'bad'); buzz(40); }
+      else if (e.k === 'waste') { var d2 = drink(e.id); flash(d2, 'shake'); floatAt(d2, '浪費 1 杯', 'bad'); say('沒人點這個！'); buzz(40); }
+      else if (e.k === 'nostock') { flash(drink(e.id), 'shake'); say('這款賣完了'); }
+    });
+    renderHud();
+    if (S.phase === 'report' && screen === 'day' && !closing) { closing = true; paused = false; renderReport(); $('#ovCloseSub').textContent = '今天賣出 ' + S.today.sold + ' 杯'; $('#ovClose').hidden = false; setTimeout(function () { closing = false; $('#ovClose').hidden = true; show('report'); }, 1000); }
+  }
+  function renderDay() {
+    $('#dClock').style.width = Math.min(100, S.t / CFG.dayLen * 100) + '%'; $('#dTime').textContent = Math.max(0, Math.ceil(CFG.dayLen - S.t)) + ' 秒';
+    for (var i = 0; i < CFG.seats; i++) {
+      var el = seatEl(i); if (!el) continue;
+      var c = null; for (var k = 0; k < S.queue.length; k++) if (S.queue[k].seat === i) c = S.queue[k];
+      el.classList.toggle('has', !!c);
+      el.classList.remove('mood-meh', 'mood-mad');
+      if (c) {
+        var r = c.p / c.max; if (r <= 0.3) el.classList.add('mood-mad'); else if (r <= CFG.tipRatio) el.classList.add('mood-meh');
+        var w = el.querySelector('.want'), nm = P(c.want).name;
+        if (el.dataset.cid !== String(c.id)) { el.dataset.cid = c.id; w.innerHTML = cupHtml(c.want, 'mini') + '<span class="num">$' + P(c.want).price + '</span>'; el.querySelector('.wname').textContent = nm; el.style.setProperty('--skin', SKINS[c.id % SKINS.length]); el.style.setProperty('--hair', HAIRS[(c.id * 7 + 3) % HAIRS.length]); }
+        el.querySelector('.pat u').style.width = Math.max(0, r * 100) + '%';
+      } else el.dataset.cid = '';
+    }
+    PRODUCTS.forEach(function (p) {
+      var d = drink(p.id); if (!d) return; d.querySelector('.st').textContent = '剩 ' + S.stock[p.id]; d.classList.toggle('out', S.stock[p.id] <= 0); d.classList.toggle('low', S.stock[p.id] > 0 && S.stock[p.id] <= 3);
+    });
+    $('#dSold').textContent = '今日賣出 ' + S.today.sold + ' 杯・營收 ' + money(S.today.income);
+    $('#dLost').textContent = '流失 ' + S.today.lost;
+  }
+
+  /* 日報與最終 */
+  function row(k, v, cls) { return '<div class="' + (cls || '') + '"><dt>' + k + '</dt><dd class="' + (cls || '') + '">' + v + '</dd></div>'; }
+  function renderReport() {
+    var t = S.today, net = S.cash - S.cashStartDay, repD = S.rep - t.repStart;
+    $('#rTitle').textContent = '第 ' + S.day + ' 天 打烊';
+    $('#rLedger').innerHTML = row('賣出', t.sold + ' 杯') + row('營收', money(t.income) + (t.tips ? '（含小費 ' + money(t.tips) + '）' : ''), 'pos') +
+      row('房租', '-' + money(t.rent), 'neg') + row('流失客人', t.lost + ' 位') + row('錯點浪費', t.wasted + ' 杯') +
+      row('聲望', (repD >= 0 ? '+' : '') + repD) + row('今天淨變化（含進貨）', (net >= 0 ? '+' : '-') + money(Math.abs(net)), 'total ' + (net >= 0 ? 'pos' : 'neg')) + row('現金', money(S.cash), 'total');
+    $('#rNote').textContent = S.over ? '現金不夠付房租，小店撐不下去了。' : S.day >= CFG.days ? '營業結束，來看最終成績。' : '明天的天氣：' + EVENTS[peekEvent()].name;
+    $('#bNext').textContent = S.over || S.day >= CFG.days ? '看最終成績' : '準備第 ' + (S.day + 1) + ' 天';
+  }
+  function peekEvent() { var c = { rs: S.rs, day: S.day + 1 }; return pickEvent(c); }
+  $('#bNext').addEventListener('click', function () {
+    var wasFinal = S.over || S.day >= CFG.days;
+    advance(S);
+    if (S.phase === 'final') { renderFinal(); show('final'); } else { tab = 'stock'; renderPrep(); show('prep'); }
+    void wasFinal;
+  });
+  function renderFinal() {
+    var g = grade(S), tot = 0; PRODUCTS.forEach(function (p) { tot += S.sold[p.id]; });
+    $('#fMedal').className = 'medal' + (S.over ? ' bust' : '');
+    var ns = { gold: 3, silver: 2, bronze: 1 }[g.key] || 0, stars = '', conf = '', cc = ['#ffd666', '#ff7a5c', '#7fd6a8', '#8ec9f0', '#fff'];
+    for (var si = 0; si < 3; si++) stars += '<i class="' + (si < ns ? '' : 'off') + '">★</i>';
+    if (ns >= 2) for (var ci = 0; ci < 26; ci++) conf += '<i class="conf" style="left:' + (ci * 3.9 + 1) + '%;background:' + cc[ci % 5] + ';animation-delay:' + ((ci * 0.37) % 2.4).toFixed(2) + 's"></i>';
+    $('#fMedal').innerHTML = conf + '<div style="letter-spacing:.2em;font-size:12px;opacity:.8">最終成績</div><h2>' + g.name + '</h2><div class="stars">' + stars + '</div><div class="big" id="fBig">' + money(0) + '</div><div>' + g.note + '</div>';
+    countUp($('#fBig'), S.cash);
+    var up = S.upg.flow + S.upg.seat + S.upg.fridge, nu = PRODUCTS.filter(function (p) { return S.unlocked[p.id]; }).length;
+    var newBest = S.cash > store.best;
+    $('#fLedger').innerHTML = row('目標', money(CFG.goal)) + row('經營天數', S.day + ' 天') + row('總共賣出', tot + ' 杯') + row('升級等級合計', up + ' 級') + row('解鎖飲料', nu + '/' + PRODUCTS.length) + row('最高紀錄', money(Math.max(store.best, S.cash)) + (newBest ? ' 新紀錄' : ''), newBest ? 'pos' : '');
+    PRODUCTS.forEach(function (p) { store.sold[p.id] = (store.sold[p.id] || 0) + S.sold[p.id]; if (S.unlocked[p.id]) store.seen[p.id] = true; });
+    store.plays++; if (S.cash > store.best) store.best = S.cash; save();
+    PRODUCTS.forEach(function (p) { S.sold[p.id] = 0; });
+  }
+  $('#bAgain').addEventListener('click', function () { S = newState(Date.now() & 0x7fffffff); prevCash = null; tab = 'stock'; renderPrep(); show('prep'); });
+  $('#bStart').addEventListener('click', function () { S = newState(Date.now() & 0x7fffffff); prevCash = null; tab = 'stock'; renderPrep(); show('prep'); });
+
+  /* 測試 */
+  $('#bTest').addEventListener('click', function () {
+    var r = runTests(), pass = r.filter(function (x) { return x.ok; }).length;
+    $('#tSum').textContent = pass + ' / ' + r.length + ' 項通過';
+    $('#tList').innerHTML = r.map(function (x) { return '<li><span class="' + (x.ok ? 'p' : 'f') + '">' + (x.ok ? '✓' : '✗') + '</span><span>' + x.name + (x.ok ? '' : '<br>' + x.msg) + '</span></li>'; }).join('');
+    show('test');
+  });
+  $('#bTestBack').addEventListener('click', function () { show('home'); });
+
+  /* 主迴圈 */
+  function frame(now) {
+    var dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (screen === 'day' && !paused) { step(S, dt); drain(); if (screen === 'day') renderDay(); }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(function (n) { last = n; requestAnimationFrame(frame); });
+  window.__shop = { get state() { return S; }, tick: function (dt) { if (screen === 'day' && !paused) { step(S, dt); drain(); if (screen === 'day') renderDay(); } } };
+  show('home');
+})();
+</script>
+
+</body>
+</html>
